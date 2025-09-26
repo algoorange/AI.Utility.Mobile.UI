@@ -3,4 +3,5 @@ export { InfoCard } from './InfoCard';
 export { BillListItem } from './BillListItem';
 export { ConsumptionChart } from './ConsumptionChart';
 export { AsyncImage } from './AsyncImage';
+export { VoiceRecorder } from './VoiceRecorder';
 

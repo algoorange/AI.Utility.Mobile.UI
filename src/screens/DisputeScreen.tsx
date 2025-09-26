@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, HelperText, Modal, Portal, Text, TextInput } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Header } from '@components';
+import { Audio } from 'expo-av';
+import { Header, VoiceRecorder } from '@components';
 import { useAppState } from '@hooks';
 import type { Dispute, DisputeStatus } from '@data/mockBills';
 
@@ -28,8 +29,12 @@ export const DisputeScreen: React.FC = () => {
   const [selectedBill, setSelectedBill] = useState('');
   const [comments, setComments] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [voiceUri, setVoiceUri] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isFormVisible, setIsFormVisible] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
 
   const handleSelect = (id: string) => setSelectedBill(id);
 
@@ -59,7 +64,8 @@ export const DisputeScreen: React.FC = () => {
       status: 'Submitted',
       submittedAt: new Date().toISOString(),
       comments: comments.trim(),
-      attachment: imageUri
+      attachment: imageUri,
+      voiceNote: voiceUri
     };
 
     addDispute(newDispute);
@@ -68,6 +74,7 @@ export const DisputeScreen: React.FC = () => {
     setSelectedBill('');
     setComments('');
     setImageUri(null);
+    setVoiceUri(null);
   };
 
   const handleCancel = () => {
@@ -75,7 +82,64 @@ export const DisputeScreen: React.FC = () => {
     setSelectedBill('');
     setComments('');
     setImageUri(null);
+    setVoiceUri(null);
   };
+
+  const stopPlayback = useCallback(async () => {
+    if (soundRef.current) {
+      try {
+        await soundRef.current.stopAsync();
+      } catch (error) {
+        // ignore
+      }
+      try {
+        await soundRef.current.unloadAsync();
+      } catch (error) {
+        // ignore
+      }
+      soundRef.current = null;
+    }
+    setPlayingId(null);
+  }, []);
+
+  const togglePlayback = useCallback(
+    async (disputeId: string, uri: string | null | undefined) => {
+      if (!uri) {
+        return;
+      }
+
+      setPlaybackError(null);
+
+      if (playingId === disputeId) {
+        await stopPlayback();
+        return;
+      }
+
+      await stopPlayback();
+
+      try {
+        const { sound } = await Audio.Sound.createAsync({ uri });
+        soundRef.current = sound;
+        setPlayingId(disputeId);
+
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (!status.isLoaded) {
+            return;
+          }
+
+          if (!status.isPlaying) {
+            stopPlayback().catch(() => undefined);
+          }
+        });
+
+        await sound.playAsync();
+      } catch (error) {
+        setPlaybackError('Unable to play the voice note.');
+        await stopPlayback();
+      }
+    },
+    [playingId, stopPlayback]
+  );
 
   const hasError = isFormVisible && selectedBill.trim().length === 0;
 
@@ -89,9 +153,15 @@ export const DisputeScreen: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [showSuccess]);
 
+  useEffect(() => {
+    return () => {
+      stopPlayback().catch(() => undefined);
+    };
+  }, [stopPlayback]);
+
   return (
     <View style={styles.container}>
-      <Header title="Dispute" />
+      <Header title="Dispute" canGoBack />
       <ScrollView contentContainerStyle={styles.content}>
         {!isFormVisible ? (
           <>
@@ -114,6 +184,12 @@ export const DisputeScreen: React.FC = () => {
                 ) : (
                   disputes.map((dispute, index) => {
                     const formattedDate = formatDate(dispute.submittedAt);
+
+                    const handleToggle = () => {
+                      togglePlayback(dispute.id, dispute.voiceNote).catch(() => undefined);
+                    };
+
+                    const isCurrent = playingId === dispute.id;
 
                     return (
                       <View
@@ -138,6 +214,19 @@ export const DisputeScreen: React.FC = () => {
                             {dispute.comments}
                           </Text>
                         )}
+
+                        {dispute.voiceNote && (
+                          <View style={styles.voicePlayback}>
+                            <Button
+                              mode="outlined"
+                              icon={isCurrent ? 'stop' : 'play'}
+                              onPress={handleToggle}
+                            >
+                              {isCurrent ? 'Stop' : 'Play Voice Note'}
+                            </Button>
+                          </View>
+                        )}
+
                         <Text variant="bodySmall" style={styles.disputeMeta}>
                           Submitted on {formattedDate}
                         </Text>
@@ -170,10 +259,11 @@ export const DisputeScreen: React.FC = () => {
                 label="Provide details"
                 mode="outlined"
                 multiline
-                numberOfLines={4}
+                numberOfLines={8}
                 value={comments}
                 onChangeText={setComments}
-                style={styles.input}
+                style={[styles.input, styles.textArea]}
+                textAlignVertical="top"
               />
 
               <View style={styles.buttonRow}>
@@ -187,6 +277,8 @@ export const DisputeScreen: React.FC = () => {
 
               {imageUri && <Image source={{ uri: imageUri }} style={styles.preview} />}
 
+              <VoiceRecorder value={voiceUri} onChange={setVoiceUri} />
+
               <View style={styles.formActions}>
                 <Button mode="text" onPress={handleCancel}>
                   Cancel
@@ -199,6 +291,12 @@ export const DisputeScreen: React.FC = () => {
           </Card>
         )}
       </ScrollView>
+
+      {playbackError && (
+        <HelperText type="error" visible style={styles.voiceError}>
+          {playbackError}
+        </HelperText>
+      )}
 
       <Portal>
         <Modal visible={showSuccess} onDismiss={() => setShowSuccess(false)} contentContainerStyle={styles.modalContent}>
@@ -225,6 +323,11 @@ const styles = StyleSheet.create({
   input: {
     marginTop: 12
   },
+  textArea: {
+    marginTop: 12,
+    borderRadius: 12,
+    minHeight: 100
+  },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -244,6 +347,12 @@ const styles = StyleSheet.create({
   primaryAction: {
     marginTop: 16,
     borderRadius: 12
+  },
+  voicePlayback: {
+    marginTop: 12
+  },
+  voiceError: {
+    textAlign: 'center'
   },
   modalContent: {
     alignItems: 'center',
@@ -297,6 +406,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 12,
     marginTop: 16
+  },
+  voicePlayback: {
+    marginTop: 12
+  },
+  voiceError: {
+    textAlign: 'center'
   }
 });
 

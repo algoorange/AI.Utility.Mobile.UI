@@ -126,6 +126,7 @@ export interface Dispute {
   submittedAt: string;
   comments: string;
   attachment?: string | null;
+  voiceNote?: string | null;
 }
 
 export const disputes: Dispute[] = [
@@ -135,7 +136,8 @@ export const disputes: Dispute[] = [
     status: 'Under Review',
     submittedAt: '2024-06-25T08:45:00Z',
     comments: 'Meter reading does not match the billed usage for May.',
-    attachment: null
+    attachment: null,
+    voiceNote: null
   },
   {
     id: 'DSP-002',
@@ -143,7 +145,8 @@ export const disputes: Dispute[] = [
     status: 'Resolved',
     submittedAt: '2024-05-14T10:12:00Z',
     comments: 'Late fee applied despite on-time payment.',
-    attachment: null
+    attachment: null,
+    voiceNote: null
   },
   {
     id: 'DSP-003',
@@ -151,7 +154,8 @@ export const disputes: Dispute[] = [
     status: 'Submitted',
     submittedAt: '2024-07-02T13:30:00Z',
     comments: 'Incorrect tariff rate detected in the latest bill.',
-    attachment: null
+    attachment: null,
+    voiceNote: null
   }
 ];
 
