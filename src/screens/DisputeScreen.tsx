@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, HelperText, Modal, Portal, Text, TextInput } from 'react-native-paper';
+import { Button, Card, HelperText, Menu, Modal, Portal, Text, TextInput } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
@@ -25,8 +25,9 @@ const formatDate = (value: string) => {
 };
 
 export const DisputeScreen: React.FC = () => {
-  const { disputes, addDispute } = useAppState();
+  const { disputes, bills, addDispute } = useAppState();
   const [selectedBill, setSelectedBill] = useState('');
+  const [billMenuVisible, setBillMenuVisible] = useState(false);
   const [comments, setComments] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [voiceUri, setVoiceUri] = useState<string | null>(null);
@@ -36,7 +37,10 @@ export const DisputeScreen: React.FC = () => {
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
 
-  const handleSelect = (id: string) => setSelectedBill(id);
+  const handleSelect = (id: string) => {
+    setSelectedBill(id);
+    setBillMenuVisible(false);
+  };
 
   const handleUpload = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.7 });
@@ -243,16 +247,33 @@ export const DisputeScreen: React.FC = () => {
           <Card style={styles.card}>
             <Card.Content>
               <Text variant="titleLarge">Submit a Dispute</Text>
-              <TextInput
-                label="Select Bill ID"
-                mode="outlined"
-                value={selectedBill}
-                onChangeText={handleSelect}
-                placeholder="e.g. BIL-2024-0001"
-                style={styles.input}
-              />
+              <Menu
+                visible={billMenuVisible}
+                onDismiss={() => setBillMenuVisible(false)}
+                anchor={
+                  <TextInput
+                    label="Select Bill ID"
+                    mode="outlined"
+                    value={selectedBill}
+                    placeholder="Choose a bill"
+                    style={styles.input}
+                    editable={false}
+                    showSoftInputOnFocus={false}
+                    right={<TextInput.Icon icon={billMenuVisible ? 'chevron-up' : 'chevron-down'} />}
+                    onPressIn={() => setBillMenuVisible(true)}
+                  />
+                }
+              >
+                {bills.map((bill) => (
+                  <Menu.Item
+                    key={bill.id}
+                    onPress={() => handleSelect(bill.id)}
+                    title={`${bill.id} • ${bill.account}`}
+                  />
+                ))}
+              </Menu>
               <HelperText type={hasError ? 'error' : 'info'} visible>
-                {hasError ? 'Please select a bill to dispute' : 'Enter the bill ID to dispute'}
+                {hasError ? 'Please select a bill to dispute' : 'Choose the bill you want to dispute'}
               </HelperText>
 
               <TextInput
