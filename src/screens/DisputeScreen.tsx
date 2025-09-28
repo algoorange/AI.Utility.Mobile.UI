@@ -1,18 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, HelperText, Menu, Modal, Portal, Text, TextInput } from 'react-native-paper';
+import { Image, ScrollView, StyleSheet, View, TouchableOpacity, FlatList, Alert, RefreshControl } from 'react-native';
+import { Button, Card, HelperText, Modal, Portal, Text, TextInput, ActivityIndicator } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
-import { Header, VoiceRecorder } from '@components';
-import { useAppState } from '@hooks';
-import type { Dispute, DisputeStatus } from '@data/mockBills';
+import { Header, VoiceRecorder } from '../components';
+import { useAppState } from '../hooks';
+import type { Dispute, DisputeStatus } from '../data/mockBills';
+import { apiService } from '../services/api';
 
 const statusColors: Record<DisputeStatus, string> = {
   Submitted: '#1e88e5',
   'Under Review': '#fb8c00',
   Resolved: '#2e7d32',
-  Rejected: '#c62828'
+  Rejected: '#c62828',
+  open: '#1e88e5'
 };
 
 const formatDate = (value: string) => {
@@ -24,10 +26,20 @@ const formatDate = (value: string) => {
   return date.toLocaleString();
 };
 
+const issueTypes = [
+  { value: 'high_bill', label: 'High Bill Amount' },
+  { value: 'wrong_meter_reading', label: 'Wrong Meter Reading' },
+  { value: 'payment_issue', label: 'Payment Issue' },
+  { value: 'other', label: 'Other' }
+];
+
 export const DisputeScreen: React.FC = () => {
-  const { disputes, bills, addDispute } = useAppState();
+  const { disputes, bills, addDispute, fetchDisputes, refreshDisputes, isLoadingDisputes, disputesError } = useAppState();
+  const CUSTOMER_ID = 'd6ac7f72-0090-48c7-abdc-38347ba3687f'; // Hardcoded for now
   const [selectedBill, setSelectedBill] = useState('');
   const [billMenuVisible, setBillMenuVisible] = useState(false);
+  const [issueType, setIssueType] = useState('');
+  const [issueTypeMenuVisible, setIssueTypeMenuVisible] = useState(false);
   const [comments, setComments] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [voiceUri, setVoiceUri] = useState<string | null>(null);
@@ -35,11 +47,18 @@ export const DisputeScreen: React.FC = () => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
 
   const handleSelect = (id: string) => {
     setSelectedBill(id);
     setBillMenuVisible(false);
+  };
+
+  const handleIssueTypeSelect = (type: string) => {
+    setIssueType(type);
+    setIssueTypeMenuVisible(false);
   };
 
   const handleUpload = async () => {
@@ -57,36 +76,80 @@ export const DisputeScreen: React.FC = () => {
     }
   };
 
-  const handleSubmit = () => {
-    if (selectedBill.trim().length === 0) {
+  const handleSubmit = async () => {
+    if (selectedBill.trim().length === 0 || issueType.trim().length === 0 || !imageUri) {
+      Alert.alert('Missing Information', 'Please fill in all required fields and attach a photo.');
       return;
     }
 
-    const newDispute: Dispute = {
-      id: `DSP-${Date.now()}`,
-      billId: selectedBill.trim(),
-      status: 'Submitted',
-      submittedAt: new Date().toISOString(),
-      comments: comments.trim(),
-      attachment: imageUri,
-      voiceNote: voiceUri
-    };
+    setIsSubmitting(true);
 
-    addDispute(newDispute);
-    setShowSuccess(true);
-    setIsFormVisible(false);
+    try {
+      // For React Native, create a file-like object that works with FormData
+      const fileInfo = {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'evidence.jpg',
+      };
+
+      // Submit to backend
+      const result = await apiService.submitDispute({
+        bill_id: selectedBill.trim(),
+        customer_id: 'CUST-001', // Hardcoded for now - you can make this dynamic later
+        issue_type: issueType,
+        description: comments.trim() || 'No additional comments provided',
+        evidence_photo: fileInfo as any
+      });
+
+      if (result.success) {
+        // Also add to local state for immediate UI update
+        const newDispute: Dispute = {
+          id: result.dispute_id || `DSP-${Date.now()}`,
+          billId: selectedBill.trim(),
+          status: 'Submitted',
+          submittedAt: new Date().toISOString(),
+          comments: comments.trim(),
+          attachment: imageUri,
+          voiceNote: voiceUri
+        };
+
+        addDispute(newDispute);
+        setShowSuccess(true);
+        setIsFormVisible(false);
+        resetForm();
+      } else {
+        Alert.alert('Submission Failed', result.message || 'Failed to submit dispute. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting dispute:', error);
+      Alert.alert('Error', 'Failed to submit dispute. Please check your connection and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
     setSelectedBill('');
+    setIssueType('');
     setComments('');
     setImageUri(null);
     setVoiceUri(null);
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshDisputes(CUSTOMER_ID);
+    } catch (error) {
+      console.error('Error refreshing disputes:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleCancel = () => {
     setIsFormVisible(false);
-    setSelectedBill('');
-    setComments('');
-    setImageUri(null);
-    setVoiceUri(null);
+    resetForm();
   };
 
   const stopPlayback = useCallback(async () => {
@@ -145,7 +208,7 @@ export const DisputeScreen: React.FC = () => {
     [playingId, stopPlayback]
   );
 
-  const hasError = isFormVisible && selectedBill.trim().length === 0;
+  const hasError = isFormVisible && (selectedBill.trim().length === 0 || issueType.trim().length === 0);
 
   useEffect(() => {
     if (!showSuccess) {
@@ -157,6 +220,11 @@ export const DisputeScreen: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [showSuccess]);
 
+  // Load disputes on component mount
+  useEffect(() => {
+    fetchDisputes(CUSTOMER_ID);
+  }, [fetchDisputes]);
+
   useEffect(() => {
     return () => {
       stopPlayback().catch(() => undefined);
@@ -166,7 +234,17 @@ export const DisputeScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Header title="Dispute" canGoBack />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#1e88e5']}
+            tintColor="#1e88e5"
+          />
+        }
+      >
         {!isFormVisible ? (
           <>
             <Button
@@ -181,11 +259,39 @@ export const DisputeScreen: React.FC = () => {
             <Card style={styles.card}>
               <Card.Content>
                 <Text variant="titleLarge">Your Disputes</Text>
-                {disputes.length === 0 ? (
+                
+                {/* Loading State */}
+                {isLoadingDisputes && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" />
+                    <Text variant="bodyMedium" style={styles.loadingText}>
+                      Loading disputes...
+                    </Text>
+                  </View>
+                )}
+
+                {/* Error State */}
+                {disputesError && !isLoadingDisputes && (
+                  <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={48} color="#c62828" />
+                    <Text variant="bodyMedium" style={styles.errorText}>
+                      {disputesError}
+                    </Text>
+                    <Button mode="outlined" onPress={handleRefresh} style={styles.retryButton}>
+                      Retry
+                    </Button>
+                  </View>
+                )}
+
+                {/* Empty State */}
+                {!isLoadingDisputes && !disputesError && disputes.length === 0 && (
                   <Text variant="bodyMedium" style={styles.emptyState}>
                     You have not submitted any disputes yet.
                   </Text>
-                ) : (
+                )}
+
+                {/* Disputes List */}
+                {!isLoadingDisputes && !disputesError && disputes.length > 0 && (
                   disputes.map((dispute, index) => {
                     const formattedDate = formatDate(dispute.submittedAt);
 
@@ -247,44 +353,51 @@ export const DisputeScreen: React.FC = () => {
           <Card style={styles.card}>
             <Card.Content>
               <Text variant="titleLarge">Submit a Dispute</Text>
-              <Menu
-                visible={billMenuVisible}
-                onDismiss={() => setBillMenuVisible(false)}
-                anchor={
-                  <TextInput
-                    label="Select Bill ID"
-                    mode="outlined"
-                    value={selectedBill}
-                    placeholder="Choose a bill"
-                    style={styles.input}
-                    editable={false}
-                    showSoftInputOnFocus={false}
-                    right={<TextInput.Icon icon={billMenuVisible ? 'chevron-up' : 'chevron-down'} />}
-                    onPressIn={() => setBillMenuVisible(true)}
-                  />
-                }
-              >
-                {bills.map((bill) => (
-                  <Menu.Item
-                    key={bill.id}
-                    onPress={() => handleSelect(bill.id)}
-                    title={`${bill.id} • ${bill.account}`}
-                  />
-                ))}
-              </Menu>
-              <HelperText type={hasError ? 'error' : 'info'} visible>
-                {hasError ? 'Please select a bill to dispute' : 'Choose the bill you want to dispute'}
+              
+              <TouchableOpacity onPress={() => setBillMenuVisible(true)}>
+                <TextInput
+                  label="Select Bill ID *"
+                  mode="outlined"
+                  value={selectedBill ? bills.find(bill => bill.id === selectedBill)?.id || selectedBill : ''}
+                  placeholder="Choose a bill"
+                  style={styles.input}
+                  editable={false}
+                  showSoftInputOnFocus={false}
+                  pointerEvents="none"
+                  right={<TextInput.Icon icon={billMenuVisible ? 'chevron-up' : 'chevron-down'} />}
+                />
+              </TouchableOpacity>
+              <HelperText type={selectedBill.trim().length === 0 ? 'error' : 'info'} visible>
+                {selectedBill.trim().length === 0 ? 'Please select a bill to dispute' : 'Choose the bill you want to dispute'}
+              </HelperText>
+
+              <TouchableOpacity onPress={() => setIssueTypeMenuVisible(true)}>
+                <TextInput
+                  label="Issue Type *"
+                  mode="outlined"
+                  value={issueType ? issueTypes.find(type => type.value === issueType)?.label || issueType : ''}
+                  placeholder="Select issue type"
+                  style={styles.input}
+                  editable={false}
+                  showSoftInputOnFocus={false}
+                  pointerEvents="none"
+                  right={<TextInput.Icon icon={issueTypeMenuVisible ? 'chevron-up' : 'chevron-down'} />}
+                />
+              </TouchableOpacity>
+              <HelperText type={issueType.trim().length === 0 ? 'error' : 'info'} visible>
+                {issueType.trim().length === 0 ? 'Please select an issue type' : 'Type of issue you are reporting'}
               </HelperText>
 
               <TextInput
                 label="Provide details"
                 mode="outlined"
                 multiline
-                numberOfLines={8}
+                numberOfLines={6}
                 value={comments}
                 onChangeText={setComments}
                 style={[styles.input, styles.textArea]}
                 textAlignVertical="top"
+                placeholder="Describe the issue in detail..."
               />
 
               <View style={styles.buttonRow}>
@@ -296,7 +409,17 @@ export const DisputeScreen: React.FC = () => {
                 </Button>
               </View>
 
-              {imageUri && <Image source={{ uri: imageUri }} style={styles.preview} />}
+              {imageUri && (
+                <View style={styles.previewContainer}>
+                  <Text variant="bodyMedium" style={styles.previewLabel}>Evidence Photo *</Text>
+                  <Image source={{ uri: imageUri }} style={styles.preview} />
+                </View>
+              )}
+              {!imageUri && (
+                <HelperText type="error" visible>
+                  Photo evidence is required
+                </HelperText>
+              )}
 
               <VoiceRecorder value={voiceUri} onChange={setVoiceUri} />
 
@@ -304,8 +427,14 @@ export const DisputeScreen: React.FC = () => {
                 <Button mode="text" onPress={handleCancel}>
                   Cancel
                 </Button>
-                <Button mode="contained" icon="send" onPress={handleSubmit} disabled={hasError}>
-                  Submit Dispute
+                <Button 
+                  mode="contained" 
+                  icon={isSubmitting ? undefined : "send"} 
+                  onPress={handleSubmit} 
+                  disabled={hasError || isSubmitting || !imageUri}
+                  loading={isSubmitting}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Dispute'}
                 </Button>
               </View>
             </Card.Content>
@@ -325,6 +454,75 @@ export const DisputeScreen: React.FC = () => {
           <Text variant="titleMedium" style={styles.modalText}>
             Dispute submitted!
           </Text>
+        </Modal>
+
+        {/* Bill Selection Dropdown Modal */}
+        <Modal 
+          visible={billMenuVisible} 
+          onDismiss={() => setBillMenuVisible(false)} 
+          contentContainerStyle={styles.dropdownModal}
+        >
+          <View style={styles.dropdownContainer}>
+            <Text variant="titleMedium" style={styles.dropdownTitle}>
+              Select Bill ID
+            </Text>
+            <FlatList
+              data={bills}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleSelect(item.id)}
+                >
+                  <Text variant="bodyLarge">{item.id}</Text>
+                  <Text variant="bodyMedium" style={styles.dropdownItemSubtext}>
+                    {item.account} • ${item.amount}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              style={styles.dropdownList}
+            />
+            <Button 
+              mode="outlined" 
+              onPress={() => setBillMenuVisible(false)}
+              style={styles.dropdownCancelButton}
+            >
+              Cancel
+            </Button>
+          </View>
+        </Modal>
+
+        {/* Issue Type Selection Dropdown Modal */}
+        <Modal 
+          visible={issueTypeMenuVisible} 
+          onDismiss={() => setIssueTypeMenuVisible(false)} 
+          contentContainerStyle={styles.dropdownModal}
+        >
+          <View style={styles.dropdownContainer}>
+            <Text variant="titleMedium" style={styles.dropdownTitle}>
+              Select Issue Type
+            </Text>
+            <FlatList
+              data={issueTypes}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => handleIssueTypeSelect(item.value)}
+                >
+                  <Text variant="bodyLarge">{item.label}</Text>
+                </TouchableOpacity>
+              )}
+              style={styles.dropdownList}
+            />
+            <Button 
+              mode="outlined" 
+              onPress={() => setIssueTypeMenuVisible(false)}
+              style={styles.dropdownCancelButton}
+            >
+              Cancel
+            </Button>
+          </View>
         </Modal>
       </Portal>
     </View>
@@ -355,8 +553,14 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 12
   },
+  previewContainer: {
+    marginTop: 16
+  },
+  previewLabel: {
+    marginBottom: 8,
+    fontWeight: '600'
+  },
   preview: {
-    marginTop: 16,
     width: '100%',
     height: 180,
     borderRadius: 16
@@ -428,11 +632,56 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16
   },
-  voicePlayback: {
-    marginTop: 12
+  dropdownModal: {
+    backgroundColor: 'white',
+    margin: 20,
+    borderRadius: 16,
+    maxHeight: '70%'
   },
-  voiceError: {
+  dropdownContainer: {
+    padding: 20
+  },
+  dropdownTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+    fontWeight: 'bold'
+  },
+  dropdownList: {
+    maxHeight: 300
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb'
+  },
+  dropdownItemSubtext: {
+    color: '#6b7280',
+    marginTop: 2
+  },
+  dropdownCancelButton: {
+    marginTop: 16
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 32
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#6b7280'
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: 32
+  },
+  errorText: {
+    marginTop: 12,
+    marginBottom: 16,
+    color: '#c62828',
     textAlign: 'center'
+  },
+  retryButton: {
+    marginTop: 8
   }
 });
 

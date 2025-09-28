@@ -117,7 +117,7 @@ export const complaints: Complaint[] = [
   }
 ];
 
-export type DisputeStatus = 'Submitted' | 'Under Review' | 'Resolved' | 'Rejected';
+export type DisputeStatus = 'Submitted' | 'Under Review' | 'Resolved' | 'Rejected' | 'open';
 
 export interface Dispute {
   id: string;
@@ -127,6 +127,30 @@ export interface Dispute {
   comments: string;
   attachment?: string | null;
   voiceNote?: string | null;
+}
+
+// Backend dispute interface
+export interface BackendDispute {
+  dispute_id: string;
+  bill_id: string;
+  customer_id: string;
+  issue_type: string;
+  description: string;
+  evidence_photo: string; // base64 encoded
+  status: string;
+  resolution: string | null;
+  ai_summary: string | null;
+  ai_suggestion: string | null;
+  created_at: string;
+  updated_at: string;
+  ai_confidence?: string;
+}
+
+export interface GetDisputesResponse {
+  success: boolean;
+  disputes: BackendDispute[];
+  count: number;
+  message?: string;
 }
 
 export const disputes: Dispute[] = [

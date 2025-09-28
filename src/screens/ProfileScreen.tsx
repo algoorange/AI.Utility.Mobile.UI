@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, List, Switch, Text } from 'react-native-paper';
-import { Header } from '@components';
-import { useThemeMode, useAppState } from '@hooks';
+import { Header } from '../components';
+import { useThemeMode, useAppState } from '../hooks';
 
 export const ProfileScreen: React.FC = () => {
   const { isDark, toggleTheme } = useThemeMode();

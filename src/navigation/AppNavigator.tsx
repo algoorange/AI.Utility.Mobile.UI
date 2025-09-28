@@ -10,7 +10,7 @@ import {
   SupportScreen,
   DisputeScreen,
   ProfileScreen
-} from '@screens';
+} from '../screens';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export type RootTabParamList = {
