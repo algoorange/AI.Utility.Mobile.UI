@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View, Alert } from 'react-native';
+import { ScrollView, StyleSheet, View, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { 
   Card, 
   Text, 
@@ -20,11 +20,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const { login } = useAppState();
   const [accountNumber, setAccountNumber] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!accountNumber.trim() || !email.trim()) {
-      Alert.alert('Missing Information', 'Please enter both account number and email.');
+    if (!accountNumber.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Missing Information', 'Please enter account number, email, and password.');
       return;
     }
 
@@ -54,67 +55,101 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     <View style={styles.container}>
       <Header title="Login" />
       
-      <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text variant="headlineSmall" style={styles.title}>
-              Welcome Back
-            </Text>
-            <Text variant="bodyLarge" style={styles.subtitle}>
-              Sign in to your account
-            </Text>
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.content} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              {/* Company Logo */}
+              <View style={styles.logoContainer}>
+                <Image 
+                  source={require('../../assets/logo.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
 
-            <TextInput
-              label="Account Number"
-              value={accountNumber}
-              onChangeText={setAccountNumber}
-              mode="outlined"
-              style={styles.input}
-              placeholder="Enter your account number"
-              keyboardType="default"
-              autoCapitalize="none"
-            />
-
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              mode="outlined"
-              style={styles.input}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-
-            <Button
-              mode="contained"
-              onPress={handleLogin}
-              disabled={isLoading}
-              style={styles.loginButton}
-              contentStyle={styles.buttonContent}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color={theme.colors.onPrimary} />
-              ) : (
-                'Sign In'
-              )}
-            </Button>
-
-            <View style={styles.registerSection}>
-              <Text variant="bodyMedium" style={styles.registerText}>
-                Don't have an account?
+              <Text variant="headlineSmall" style={styles.title}>
+                Welcome Back
               </Text>
+              <Text variant="bodyLarge" style={styles.subtitle}>
+                Sign in to your account
+              </Text>
+
+              <TextInput
+                label="Account Number"
+                value={accountNumber}
+                onChangeText={setAccountNumber}
+                mode="outlined"
+                style={styles.input}
+                placeholder="Enter your account number"
+                keyboardType="default"
+                autoCapitalize="none"
+                returnKeyType="next"
+              />
+
+              <TextInput
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                mode="outlined"
+                style={styles.input}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                returnKeyType="next"
+              />
+
+              <TextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                mode="outlined"
+                style={styles.input}
+                placeholder="Enter your password"
+                secureTextEntry
+                autoCapitalize="none"
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
+              />
+
               <Button
-                mode="text"
-                onPress={handleRegister}
-                style={styles.registerButton}
+                mode="contained"
+                onPress={handleLogin}
+                disabled={isLoading}
+                style={styles.loginButton}
+                contentStyle={styles.buttonContent}
               >
-                Register Here
+                {isLoading ? (
+                  <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+                ) : (
+                  'Sign In'
+                )}
               </Button>
-            </View>
-          </Card.Content>
-        </Card>
-      </ScrollView>
+
+              <View style={styles.registerSection}>
+                <Text variant="bodyMedium" style={styles.registerText}>
+                  Don't have an account?
+                </Text>
+                <Button
+                  mode="text"
+                  onPress={handleRegister}
+                  style={styles.registerButton}
+                >
+                  Register Here
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -123,10 +158,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1
   },
+  keyboardAvoidingView: {
+    flex: 1
+  },
   content: {
     padding: 16,
-    justifyContent: 'center',
+    paddingTop: 20,
+    paddingBottom: 40,
     flexGrow: 1
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 24
+  },
+  logo: {
+    width: 80,
+    height: 80
   },
   card: {
     borderRadius: 16,

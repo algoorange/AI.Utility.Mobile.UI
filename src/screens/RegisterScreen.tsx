@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View, Alert } from 'react-native';
+import { ScrollView, StyleSheet, View, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { 
   Card, 
   Text, 
@@ -79,15 +79,33 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
     <View style={styles.container}>
       <Header title="Register" showBackButton onBackPress={handleBackToLogin} />
       
-      <ScrollView contentContainerStyle={styles.content}>
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text variant="headlineSmall" style={styles.title}>
-              Create Account
-            </Text>
-            <Text variant="bodyLarge" style={styles.subtitle}>
-              Register for EB Meter Reading
-            </Text>
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.content} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Card style={styles.card}>
+            <Card.Content>
+              {/* Company Logo */}
+              <View style={styles.logoContainer}>
+                <Image 
+                  source={require('../../assets/logo.png')} 
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+
+              <Text variant="headlineSmall" style={styles.title}>
+                Create Account
+              </Text>
+              <Text variant="bodyLarge" style={styles.subtitle}>
+                Register for EB Meter Reading
+              </Text>
 
             <TextInput
               label="Account Number *"
@@ -98,6 +116,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
               placeholder="Enter your account number"
               keyboardType="default"
               autoCapitalize="none"
+              returnKeyType="next"
             />
 
             <TextInput
@@ -109,6 +128,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
               placeholder="Enter your full name"
               keyboardType="default"
               autoCapitalize="words"
+              returnKeyType="next"
             />
 
             <TextInput
@@ -120,6 +140,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
               placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
+              returnKeyType="next"
             />
 
             <TextInput
@@ -130,6 +151,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
               style={styles.input}
               placeholder="Enter your phone number"
               keyboardType="phone-pad"
+              returnKeyType="next"
             />
 
             <TextInput
@@ -142,6 +164,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
               keyboardType="default"
               multiline
               numberOfLines={3}
+              returnKeyType="done"
+              onSubmitEditing={handleRegister}
             />
 
             <Button
@@ -172,7 +196,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) =>
             </View>
           </Card.Content>
         </Card>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -181,10 +206,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1
   },
+  keyboardAvoidingView: {
+    flex: 1
+  },
   content: {
     padding: 16,
-    justifyContent: 'center',
+    paddingTop: 20,
+    paddingBottom: 40,
     flexGrow: 1
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 24
+  },
+  logo: {
+    width: 80,
+    height: 80
   },
   card: {
     borderRadius: 16,
