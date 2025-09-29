@@ -35,6 +35,7 @@ export const BillsScreen: React.FC = () => {
     const now = Date.now();
     const fiveMinutesAgo = now - (5 * 60 * 1000);
     const shouldFetch = customerId && 
+      customerId !== 'demo-user' && // Don't fetch for demo users
       (bills.length === 0 || !billsLastFetched || billsLastFetched < fiveMinutesAgo) && 
       !isLoadingBills;
     

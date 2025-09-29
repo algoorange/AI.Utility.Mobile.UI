@@ -41,6 +41,7 @@ interface AppState {
   fetchBills: (customerId: string) => Promise<void>;
   refreshBills: (customerId: string) => Promise<void>;
   loadInitialData: (customerId: string) => Promise<void>;
+  loadDemoData: () => void;
   login: (accountNumber: string, email: string) => Promise<boolean>;
   register: (registerData: RegisterRequest) => Promise<boolean>;
   logout: () => void;
@@ -215,11 +216,31 @@ const useAppStore = create<AppState>((set, get) => ({
     ]);
   },
 
+  loadDemoData: () => {
+    // Load sample bills and disputes for demo mode
+    console.log('Loading demo data - bills:', bills.length, 'disputes:', disputes.length);
+    
+    set({
+      bills: bills, // Use imported mock bills
+      disputes: disputes, // Use imported mock disputes
+      backendBills: [], // No backend data in demo mode
+      backendDisputes: [], // No backend data in demo mode
+      isLoadingBills: false,
+      billsError: null,
+      isLoadingDisputes: false,
+      disputesError: null,
+      billsLastFetched: Date.now(),
+      disputesLastFetched: Date.now()
+    });
+  },
+
   login: async (accountNumber: string, email: string) => {
     try {
       const result = await apiService.loginUser(accountNumber, email);
       
       if (result && result.customer_id) {
+        // Real customer - load real-time data from backend
+        console.log('Real customer login - loading backend data');
         set({
           isAuthenticated: true,
           customerId: result.customer_id,
@@ -227,14 +248,27 @@ const useAppStore = create<AppState>((set, get) => ({
           userEmail: email
         });
         
-        // Load initial data after successful login
+        // Load initial data from backend
         const { loadInitialData } = get();
         await loadInitialData(result.customer_id);
         
         return true;
+      } else {
+        // Demo mode - no customer_id returned, use sample data
+        console.log('Demo mode login - loading sample data');
+        set({
+          isAuthenticated: true,
+          customerId: 'demo-user', // Use demo customer ID
+          userAccountNumber: accountNumber,
+          userEmail: email
+        });
+        
+        // Load demo data
+        const { loadDemoData } = get();
+        loadDemoData();
+        
+        return true;
       }
-      
-      return false;
     } catch (error) {
       console.error('Login error:', error);
       return false;

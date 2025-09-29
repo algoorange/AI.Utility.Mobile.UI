@@ -241,6 +241,7 @@ export const DisputeScreen: React.FC = () => {
     const now = Date.now();
     const fiveMinutesAgo = now - (5 * 60 * 1000);
     const shouldFetch = customerId && 
+      customerId !== 'demo-user' && // Don't fetch for demo users
       (disputes.length === 0 || !disputesLastFetched || disputesLastFetched < fiveMinutesAgo) && 
       !isLoadingDisputes;
     

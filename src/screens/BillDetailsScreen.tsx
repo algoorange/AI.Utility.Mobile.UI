@@ -160,7 +160,7 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
               </Chip>
             </View>
             
-            {backendBill && (
+            {backendBill ? (
               <>
                 <View style={styles.detailRow}>
                   <Text variant="bodyLarge" style={styles.detailLabel}>Units Consumed:</Text>
@@ -187,6 +187,36 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
                   <Text variant="bodyLarge" style={styles.detailLabel}>Meter Reading:</Text>
                   <Text variant="bodyLarge" style={styles.detailValue}>
                     {backendBill.meter_reading_start.toLocaleString()} - {backendBill.meter_reading_end.toLocaleString()}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.detailRow}>
+                  <Text variant="bodyLarge" style={styles.detailLabel}>Units Consumed:</Text>
+                  <Text variant="bodyLarge" style={styles.detailValue}>
+                    {bill.type === 'Electricity' ? '1,250 kWh' : '850 Liters'} (Demo)
+                  </Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Text variant="bodyLarge" style={styles.detailLabel}>Rate per Unit:</Text>
+                  <Text variant="bodyLarge" style={styles.detailValue}>
+                    ${bill.type === 'Electricity' ? '0.1234/kWh' : '0.0850/Liter'} (Demo)
+                  </Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Text variant="bodyLarge" style={styles.detailLabel}>Billing Period:</Text>
+                  <Text variant="bodyLarge" style={styles.detailValue}>
+                    {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} (Demo)
+                  </Text>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <Text variant="bodyLarge" style={styles.detailLabel}>Meter Reading:</Text>
+                  <Text variant="bodyLarge" style={styles.detailValue}>
+                    {bill.type === 'Electricity' ? '12,500 - 13,750' : '8,500 - 9,350'} (Demo)
                   </Text>
                 </View>
               </>
