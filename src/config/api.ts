@@ -9,6 +9,13 @@ export const API_CONFIG = {
     DISPUTES: {
       CREATE: '/disputes/create',
       GET_BY_CUSTOMER: '/disputes/get_disputes_by_customer'
+    },
+    BILLS: {
+      GET_BY_CUSTOMER: '/bills/customer'
+    },
+    AUTH: {
+      REGISTER: '/user_registration/register',
+      LOGIN: '/user_registration/get_customer_id'
     }
   },
   

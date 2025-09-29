@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, View, TouchableOpacity, FlatList, Alert, RefreshControl } from 'react-native';
 import { Button, Card, HelperText, Modal, Portal, Text, TextInput, ActivityIndicator } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { Header, VoiceRecorder } from '../components';
 import { useAppState } from '../hooks';
-import type { Dispute, DisputeStatus } from '../data/mockBills';
+import type { Dispute, DisputeStatus, BackendDispute } from '../data/mockBills';
 import { apiService } from '../services/api';
+import { DisputeStackParamList } from '../navigation/DisputeStackNavigator';
 
 const statusColors: Record<DisputeStatus, string> = {
   Submitted: '#1e88e5',
@@ -33,9 +36,11 @@ const issueTypes = [
   { value: 'other', label: 'Other' }
 ];
 
+type DisputeScreenNavigationProp = StackNavigationProp<DisputeStackParamList, 'DisputeList'>;
+
 export const DisputeScreen: React.FC = () => {
-  const { disputes, bills, addDispute, fetchDisputes, refreshDisputes, isLoadingDisputes, disputesError } = useAppState();
-  const CUSTOMER_ID = 'd6ac7f72-0090-48c7-abdc-38347ba3687f'; // Hardcoded for now
+  const navigation = useNavigation<DisputeScreenNavigationProp>();
+  const { disputes, backendDisputes, bills, addDispute, fetchDisputes, refreshDisputes, isLoadingDisputes, disputesError, customerId, disputesLastFetched } = useAppState();
   const [selectedBill, setSelectedBill] = useState('');
   const [billMenuVisible, setBillMenuVisible] = useState(false);
   const [issueType, setIssueType] = useState('');
@@ -95,7 +100,7 @@ export const DisputeScreen: React.FC = () => {
       // Submit to backend
       const result = await apiService.submitDispute({
         bill_id: selectedBill.trim(),
-        customer_id: 'CUST-001', // Hardcoded for now - you can make this dynamic later
+        customer_id: customerId, // Use customer ID from app state
         issue_type: issueType,
         description: comments.trim() || 'No additional comments provided',
         evidence_photo: fileInfo as any
@@ -139,12 +144,23 @@ export const DisputeScreen: React.FC = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await refreshDisputes(CUSTOMER_ID);
+      if (customerId) {
+        await refreshDisputes(customerId);
+      }
     } catch (error) {
       console.error('Error refreshing disputes:', error);
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const handleDisputePress = (dispute: Dispute) => {
+    // Find the corresponding backend dispute data
+    const backendDispute = backendDisputes.find(d => d.dispute_id === dispute.id);
+    navigation.navigate('DisputeDetails', { 
+      dispute, 
+      backendDispute: backendDispute || undefined 
+    });
   };
 
   const handleCancel = () => {
@@ -220,10 +236,18 @@ export const DisputeScreen: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [showSuccess]);
 
-  // Load disputes on component mount
+  // Load disputes on component mount only if not already loaded or data is stale (older than 5 minutes)
   useEffect(() => {
-    fetchDisputes(CUSTOMER_ID);
-  }, [fetchDisputes]);
+    const now = Date.now();
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+    const shouldFetch = customerId && 
+      (disputes.length === 0 || !disputesLastFetched || disputesLastFetched < fiveMinutesAgo) && 
+      !isLoadingDisputes;
+    
+    if (shouldFetch) {
+      fetchDisputes(customerId);
+    }
+  }, [customerId]); // Only depend on customerId to prevent continuous triggering
 
   useEffect(() => {
     return () => {
@@ -302,9 +326,11 @@ export const DisputeScreen: React.FC = () => {
                     const isCurrent = playingId === dispute.id;
 
                     return (
-                      <View
+                      <TouchableOpacity
                         key={dispute.id}
                         style={[styles.disputeItem, index !== 0 && styles.disputeItemDivider]}
+                        onPress={() => handleDisputePress(dispute)}
+                        activeOpacity={0.7}
                       >
                         <View style={styles.disputeHeader}>
                           <View>
@@ -340,7 +366,7 @@ export const DisputeScreen: React.FC = () => {
                         <Text variant="bodySmall" style={styles.disputeMeta}>
                           Submitted on {formattedDate}
                         </Text>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })
                 )}

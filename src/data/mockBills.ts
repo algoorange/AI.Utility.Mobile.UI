@@ -141,6 +141,7 @@ export interface BackendDispute {
   resolution: string | null;
   ai_summary: string | null;
   ai_suggestion: string | null;
+  ai_reading:string | null;
   created_at: string;
   updated_at: string;
   ai_confidence?: string;
@@ -149,6 +150,33 @@ export interface BackendDispute {
 export interface GetDisputesResponse {
   success: boolean;
   disputes: BackendDispute[];
+  count: number;
+  message?: string;
+}
+
+// Backend bill interface based on the API response
+export interface BackendBill {
+  bill_id: string;
+  customer_id: string;
+  billing_period: string;
+  issue_date: string;
+  due_date: string;
+  amount_due: number;
+  amount_paid: number;
+  status: string;
+  category: string;
+  meter_reading_start: number;
+  meter_reading_end: number;
+  units_consumed: number;
+  rate_per_unit: number;
+  created_at: string;
+  updated_at: string;
+  customer_name: string;
+}
+
+export interface GetBillsResponse {
+  success: boolean;
+  bills: BackendBill[];
   count: number;
   message?: string;
 }

@@ -1,15 +1,56 @@
-import React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { Button, Card, Divider, List, Text, useTheme } from 'react-native-paper';
-import { useAppState } from '@hooks';
-import { Header, InfoCard, ConsumptionChart } from '@components';
+import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAppState } from '../hooks';
+import { Header, InfoCard, ConsumptionChart } from '../components';
 
 export const DashboardScreen: React.FC = () => {
   const theme = useTheme();
-  const { bills, consumption } = useAppState();
+  const navigation = useNavigation();
+  const { bills, backendBills, consumption, customerId, fetchBills, isLoadingBills, billsLastFetched } = useAppState();
+
+  // Fetch bills on component mount only if not already loaded or data is stale (older than 5 minutes)
+  useEffect(() => {
+    const now = Date.now();
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+    const shouldFetch = customerId && 
+      (bills.length === 0 || !billsLastFetched || billsLastFetched < fiveMinutesAgo) && 
+      !isLoadingBills;
+    
+    if (shouldFetch) {
+      fetchBills(customerId);
+    }
+  }, [customerId]); // Only depend on customerId to prevent continuous triggering
 
   const upcomingBill = bills.find((bill) => bill.status === 'Due' || bill.status === 'Overdue');
   const paidBillsCount = bills.filter((bill) => bill.status === 'Paid').length;
+
+  const handleQuickPay = () => {
+    if (upcomingBill) {
+      // Find the corresponding backend bill data
+      const backendBill = backendBills.find(b => b.bill_id === upcomingBill.id);
+      // Navigate to Bills tab and then to bill details
+      (navigation as any).navigate('Bills', { screen: 'BillDetails', params: { bill: upcomingBill, backendBill } });
+    }
+  };
+
+  const handleAIHelp = () => {
+    (navigation as any).navigate('AIHelp');
+  };
+
+  const handleMeterReading = () => {
+    (navigation as any).navigate('Meter');
+  };
+
+  const handleDisputeBill = () => {
+    (navigation as any).navigate('Dispute');
+  };
+
+  const handleSupportChat = () => {
+    (navigation as any).navigate('Support');
+  };
 
   return (
     <View style={styles.container}>
@@ -22,7 +63,7 @@ export const DashboardScreen: React.FC = () => {
               {upcomingBill ? `$${upcomingBill.amount.toFixed(2)}` : '$0.00'}
             </Text>
             <Text variant="bodyMedium">Due date: {upcomingBill?.dueDate ?? 'No dues'}</Text>
-            <Button mode="contained" style={styles.button} icon="credit-card">
+            <Button mode="contained" style={styles.button} icon="credit-card" onPress={handleQuickPay}>
               Quick Pay
             </Button>
           </Card.Content>
@@ -48,9 +89,44 @@ export const DashboardScreen: React.FC = () => {
               Quick Actions
             </Text>
             <Divider style={styles.divider} />
-            <List.Item title="Upload meter reading" left={() => <List.Icon icon="camera" />} />
-            <List.Item title="Dispute bill amount" left={() => <List.Icon icon="alert-circle" />} />
-            <List.Item title="Chat with support" left={() => <List.Icon icon="chat" />} />
+            
+            {/* AI Help Button - Prominently displayed */}
+            <TouchableOpacity style={styles.aiHelpButton} onPress={handleAIHelp}>
+              <View style={styles.aiHelpContent}>
+                <MaterialCommunityIcons name="robot" size={24} color="#9c27b0" />
+                <View style={styles.aiHelpText}>
+                  <Text variant="titleMedium" style={styles.aiHelpTitle}>AI Assistant</Text>
+                  <Text variant="bodySmall" style={styles.aiHelpSubtitle}>Get instant help with your questions</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color="#666" />
+              </View>
+            </TouchableOpacity>
+            
+            <Divider style={styles.divider} />
+            
+            <TouchableOpacity onPress={handleMeterReading}>
+              <List.Item 
+                title="Upload meter reading" 
+                left={() => <List.Icon icon="camera" />}
+                right={() => <List.Icon icon="chevron-right" />}
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={handleDisputeBill}>
+              <List.Item 
+                title="Dispute bill amount" 
+                left={() => <List.Icon icon="alert-circle" />}
+                right={() => <List.Icon icon="chevron-right" />}
+              />
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={handleSupportChat}>
+              <List.Item 
+                title="Contact support team" 
+                left={() => <List.Icon icon="chat" />}
+                right={() => <List.Icon icon="chevron-right" />}
+              />
+            </TouchableOpacity>
           </Card.Content>
         </Card>
       </ScrollView>
@@ -84,6 +160,30 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginVertical: 12
+  },
+  aiHelpButton: {
+    backgroundColor: '#f3e5f5',
+    borderRadius: 12,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#e1bee7'
+  },
+  aiHelpContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16
+  },
+  aiHelpText: {
+    flex: 1,
+    marginLeft: 12
+  },
+  aiHelpTitle: {
+    color: '#9c27b0',
+    fontWeight: '600'
+  },
+  aiHelpSubtitle: {
+    color: '#666',
+    marginTop: 2
   }
 });
 

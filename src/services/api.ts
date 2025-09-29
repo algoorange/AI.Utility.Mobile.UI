@@ -1,5 +1,24 @@
 import { API_CONFIG } from '../config/api';
-import type { GetDisputesResponse } from '../data/mockBills';
+import type { GetDisputesResponse, GetBillsResponse } from '../data/mockBills';
+
+export interface RegisterRequest {
+  account_number: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  address: string;
+  status?: string;
+}
+
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  customer_id?: string;
+}
+
+export interface LoginResponse {
+  customer_id: string;
+}
 
 export interface DisputeSubmissionData {
   bill_id: string;
@@ -119,6 +138,119 @@ class ApiService {
         count: 0,
         message: error instanceof Error ? error.message : 'Unknown error occurred'
       };
+    }
+  }
+
+  async getBillsByCustomer(customerId: string): Promise<GetBillsResponse> {
+    try {
+      console.log('Fetching bills for customer:', customerId);
+      
+      const response = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.BILLS.GET_BY_CUSTOMER}/${customerId}`, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        },
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          // If we can't parse the error response, use the default message
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: GetBillsResponse = await response.json();
+      console.log('Bills fetched successfully:', result.count, 'bills');
+      
+      return result;
+    } catch (error) {
+      console.error('Error fetching bills:', error);
+      
+      // Return a consistent error format
+      return {
+        success: false,
+        bills: [],
+        count: 0,
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  async registerUser(registerData: RegisterRequest): Promise<RegisterResponse> {
+    try {
+      console.log('Registering user:', registerData.account_number);
+      
+      const response = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.AUTH.REGISTER}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...API_CONFIG.DEFAULT_HEADERS,
+        },
+        body: JSON.stringify(registerData),
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          // If we can't parse the error response, use the default message
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      console.log('User registered successfully');
+      
+      return {
+        success: true,
+        message: 'Registration successful',
+        customer_id: result.customer_id
+      };
+    } catch (error) {
+      console.error('Error registering user:', error);
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  async loginUser(accountNumber: string, email: string): Promise<LoginResponse | null> {
+    try {
+      console.log('Logging in user:', accountNumber);
+      
+      const response = await fetch(`${this.baseUrl}${API_CONFIG.ENDPOINTS.AUTH.LOGIN}/${accountNumber}/${email}`, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        },
+      });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          // If we can't parse the error response, use the default message
+        }
+        throw new Error(errorMessage);
+      }
+
+      const result: LoginResponse = await response.json();
+      console.log('User logged in successfully, customer ID:', result.customer_id);
+      
+      return result;
+    } catch (error) {
+      console.error('Error logging in user:', error);
+      return null;
     }
   }
 }

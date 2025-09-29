@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Card, List, Text, TextInput } from 'react-native-paper';
-import { Header } from '@components';
-import { useAppState } from '@hooks';
+import { Header } from '../components';
+import { useAppState } from '../hooks';
 
 export const SupportScreen: React.FC = () => {
   const { complaints } = useAppState();
@@ -36,8 +36,8 @@ export const SupportScreen: React.FC = () => {
               <Button icon="phone" mode="outlined">
                 Call support
               </Button>
-              <Button icon="chat" mode="outlined">
-                Start chat
+              <Button icon="email" mode="outlined">
+                Email support
               </Button>
             </View>
             <Button icon="send" mode="contained" style={styles.submit}>

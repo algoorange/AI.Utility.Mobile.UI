@@ -2,28 +2,34 @@ import React, { useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Appbar, Switch, useTheme } from 'react-native-paper';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
-import { useThemeMode } from '@hooks';
+import { useThemeMode } from '../hooks';
 
 interface HeaderProps {
   title: string;
   right?: React.ReactNode;
   canGoBack?: boolean;
+  showBackButton?: boolean;
   onBackPress?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title, right, canGoBack }) => {
+export const Header: React.FC<HeaderProps> = ({ title, right, canGoBack, showBackButton, onBackPress }) => {
   const { isDark, toggleTheme } = useThemeMode();
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const theme = useTheme();
-  const showBack = canGoBack ?? navigation.canGoBack();
+  const showBack = showBackButton ?? canGoBack ?? navigation.canGoBack();
 
   const handleBack = useCallback(() => {
+    if (onBackPress) {
+      onBackPress();
+      return;
+    }
+
     if (!canGoBack && !navigation.canGoBack()) {
       return;
     }
 
     navigation.goBack();
-  }, [canGoBack, navigation]);
+  }, [canGoBack, navigation, onBackPress]);
 
   return (
     <Appbar.Header elevated>

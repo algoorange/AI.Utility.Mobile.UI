@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Audio } from 'expo-av';
 import { ThemeProvider } from '@providers/ThemeProvider';
 import { AppStateProvider } from '@providers/AppStateProvider';
-import { AppNavigator } from '@navigation';
+import { MainNavigator } from '@navigation/MainNavigator';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -12,7 +12,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AppStateProvider>
-        <AppNavigator />
+        <MainNavigator />
       </AppStateProvider>
     </ThemeProvider>
   );
