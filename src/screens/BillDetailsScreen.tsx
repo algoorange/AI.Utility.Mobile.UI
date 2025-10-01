@@ -48,7 +48,7 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
       setIsProcessingPayment(false);
       Alert.alert(
         'Payment Successful', 
-        `Payment of $${bill.amount.toFixed(2)} has been processed successfully.`,
+        `Payment of ₹${bill.amount.toFixed(2)} has been processed successfully.`,
         [
           {
             text: 'OK',
@@ -106,7 +106,7 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
               </View>
               <View style={styles.amountContainer}>
                 <Text variant="headlineLarge" style={[styles.amount, { color: theme.colors.primary }]}>
-                  ${bill.amount.toFixed(2)}
+                  ₹{bill.amount.toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -139,7 +139,7 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
             <View style={styles.detailRow}>
               <Text variant="bodyLarge" style={styles.detailLabel}>Amount Due:</Text>
               <Text variant="bodyLarge" style={[styles.detailValue, { color: theme.colors.primary, fontWeight: 'bold' }]}>
-                ${bill.amount.toFixed(2)}
+                ₹{bill.amount.toFixed(2)}
               </Text>
             </View>
             
@@ -172,7 +172,7 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
                 <View style={styles.detailRow}>
                   <Text variant="bodyLarge" style={styles.detailLabel}>Rate per Unit:</Text>
                   <Text variant="bodyLarge" style={styles.detailValue}>
-                    ${backendBill.rate_per_unit.toFixed(4)}/{bill.type === 'Electricity' ? 'kWh' : 'Liter'}
+                    ₹{backendBill.rate_per_unit.toFixed(4)}/{bill.type === 'Electricity' ? 'kWh' : 'Liter'}
                   </Text>
                 </View>
                 
@@ -202,7 +202,7 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
                 <View style={styles.detailRow}>
                   <Text variant="bodyLarge" style={styles.detailLabel}>Rate per Unit:</Text>
                   <Text variant="bodyLarge" style={styles.detailValue}>
-                    ${bill.type === 'Electricity' ? '0.1234/kWh' : '0.0850/Liter'} (Demo)
+                    ₹{bill.type === 'Electricity' ? '0.1234/kWh' : '0.0850/Liter'} (Demo)
                   </Text>
                 </View>
                 
@@ -303,7 +303,7 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
                 <View style={styles.summaryRow}>
                   <Text variant="titleMedium">Amount to Pay:</Text>
                   <Text variant="titleLarge" style={[styles.summaryAmount, { color: theme.colors.primary }]}>
-                    ${bill.amount.toFixed(2)}
+                    ₹{bill.amount.toFixed(2)}
                   </Text>
                 </View>
               </View>
@@ -319,7 +319,7 @@ export const BillDetailsScreen: React.FC<BillDetailsScreenProps> = ({ route, nav
                 {isProcessingPayment ? (
                   <ActivityIndicator size="small" color={theme.colors.onPrimary} />
                 ) : (
-                  `Pay $${bill.amount.toFixed(2)}`
+                  `Pay ₹${bill.amount.toFixed(2)}`
                 )}
               </Button>
             </Card.Content>

@@ -61,7 +61,7 @@ export const DashboardScreen: React.FC = () => {
           <Card.Content>
             <Text variant="titleLarge">Outstanding Balance</Text>
             <Text variant="headlineLarge" style={{ color: theme.colors.primary, marginVertical: 8 }}>
-              {upcomingBill ? `$${upcomingBill.amount.toFixed(2)}` : '$0.00'}
+              {upcomingBill ? `₹${upcomingBill.amount.toFixed(2)}` : '₹0.00'}
             </Text>
             <Text variant="bodyMedium">Due date: {upcomingBill?.dueDate ?? 'No dues'}</Text>
             <Button mode="contained" style={styles.button} icon="credit-card" onPress={handleQuickPay}>

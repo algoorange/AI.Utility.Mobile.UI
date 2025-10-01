@@ -40,7 +40,7 @@ export const BillListItem: React.FC<BillListItemProps> = ({ bill, onPay, onDownl
       <List.Item
         style={styles.item}
         title={bill.account}
-        description={`Due ${bill.dueDate} • $${bill.amount.toFixed(2)}`}
+        description={`Due ${bill.dueDate} • ₹${bill.amount.toFixed(2)}`}
         left={() => (
           <List.Icon icon={bill.type === 'Electricity' ? 'flash' : 'water'} color={theme.colors.primary} />
         )}

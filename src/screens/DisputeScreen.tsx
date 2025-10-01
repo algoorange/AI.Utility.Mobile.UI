@@ -503,7 +503,7 @@ export const DisputeScreen: React.FC = () => {
                 >
                   <Text variant="bodyLarge">{item.id}</Text>
                   <Text variant="bodyMedium" style={styles.dropdownItemSubtext}>
-                    {item.account} • ${item.amount}
+                    {item.account} • ₹{item.amount}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     marginTop: 16
   },
   dropdownModal: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8f9fa',
     margin: 20,
     borderRadius: 16,
     maxHeight: '70%'
